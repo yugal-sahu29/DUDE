@@ -449,6 +449,15 @@ def create_app(
     # Static Assets & PWA UI Serving
     # ----------------------------------------------------------------------
 
+    @app.get("/")
+    @app.get("/main.py")
+    async def serve_index():
+        """Serves the DUDE PWA Dashboard."""
+        index_file = static_dir / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        return JSONResponse({"status": "ok", "message": "DUDE Backend is running."})
+
     if static_dir.exists():
         app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
