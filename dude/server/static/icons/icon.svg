@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#070a10" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="50%" stop-color="#7928ca" />
+      <stop offset="100%" stop-color="#ff0080" />
+    </linearGradient>
+    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16" result="blur1" />
+      <feGaussianBlur stdDeviation="32" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="url(#glowGrad)" stroke-width="3" stroke-opacity="0.6" />
+  
+  <!-- Outer Glowing Ring -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="url(#glowGrad)" stroke-width="8" filter="url(#neonGlow)" stroke-dasharray="16 12" opacity="0.85" />
+  
+  <!-- Core Orb -->
+  <circle cx="256" cy="256" r="110" fill="url(#glowGrad)" opacity="0.2" filter="url(#neonGlow)" />
+  <circle cx="256" cy="256" r="90" fill="none" stroke="#00f0ff" stroke-width="6" opacity="0.9" />
+  
+  <!-- Soundwave / Neural Bars -->
+  <rect x="196" y="220" width="12" height="72" rx="6" fill="#00f0ff" />
+  <rect x="226" y="196" width="12" height="120" rx="6" fill="url(#glowGrad)" />
+  <rect x="250" y="176" width="12" height="160" rx="6" fill="#ffffff" filter="url(#neonGlow)" />
+  <rect x="274" y="196" width="12" height="120" rx="6" fill="url(#glowGrad)" />
+  <rect x="304" y="220" width="12" height="72" rx="6" fill="#00f0ff" />
+</svg>

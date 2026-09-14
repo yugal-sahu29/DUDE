@@ -1,0 +1,25 @@
+# Environment variables & secrets
+.env
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Local database and persistent storage
+data/
+*.db
+*.sqlite3
+
+# IDE files
+.vscode/
+.idea/
+*.swp

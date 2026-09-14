@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DUDE - Personal AI Assistant</title>
+  <meta name="description" content="Independent AI desktop assistant powered by Groq with persistent memory, autonomous system tools, and neural voice.">
+  <meta name="theme-color" content="#07090e">
+
+  <!-- PWA Manifest & App Icons -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div>
+      <div class="brand">
+        <img src="/icons/icon.svg" alt="DUDE Logo" class="brand-icon">
+        <div class="brand-text">
+          <h1>DUDE</h1>
+          <span class="brand-tag">v0.4 Autonomous</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu" role="navigation">
+        <a class="nav-item active" data-tab="chat">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span>Chat & Tools</span>
+        </a>
+        <a class="nav-item" data-tab="call">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+          <span>Voice Call</span>
+        </a>
+        <a class="nav-item" data-tab="telemetry">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Telemetry</span>
+        </a>
+        <a class="nav-item" data-tab="memory">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          <span>Memory Vault</span>
+        </a>
+        <a class="nav-item" data-tab="notes">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Notes</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="backend-status-text">DUDE Brain Active</span>
+      </div>
+      <div class="speaker-pill">
+        <span>Voice:</span>
+        <strong id="sidebar-voice-speaker">GuyNeural</strong>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main View Area -->
+  <main class="main-view">
+
+    <!-- 1. CHAT & TOOLS TAB -->
+    <section class="tab-pane active" id="tab-chat">
+      <div class="chat-wrapper">
+        <div class="top-bar">
+          <div class="page-title">
+            <h2>Chat & Autonomous Tools</h2>
+            <p>Talk to DUDE or ask him to perform desktop actions</p>
+          </div>
+          <div class="top-actions">
+            <button class="btn btn-secondary btn-icon" id="btn-toggle-voice" title="Toggle Auto-Voice Output">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+            </button>
+            <button class="btn btn-secondary" id="btn-mobile-connect" title="Open DUDE on your phone">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 002 2v14a2 2 0 002 2z"/></svg>
+              <span>Phone Link</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-new-chat">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>New Chat</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          <!-- Welcome message -->
+          <div class="message-row assistant">
+            <div class="message-avatar">D</div>
+            <div class="message-bubble">
+              <p>Hey! I'm <strong>DUDE</strong>, your personal AI assistant. I can help answer questions, monitor your PC hardware, launch apps, take notes, and set timers.</p>
+              <p style="margin-top: 6px; font-size: 0.85rem; color: var(--text-muted);">Try typing a message below or press the microphone icon to speak!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Prompts Chips -->
+        <div class="quick-prompts">
+          <div class="chip" data-prompt="What is my CPU and RAM usage right now?">⚡ System Stats</div>
+          <div class="chip" data-prompt="What is my current battery level?">🔋 Battery Status</div>
+          <div class="chip" data-prompt="Open Notepad for me">📝 Open Notepad</div>
+          <div class="chip" data-prompt="Search YouTube for chill coding music">🎵 Search YouTube</div>
+          <div class="chip" data-prompt="What persistent facts do you remember about me?">🧠 Check Memory</div>
+        </div>
+
+        <!-- Input Bar -->
+        <form id="chat-form" class="chat-input-box">
+          <button type="button" class="mic-btn" id="mic-btn" title="Speak to DUDE">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+          </button>
+          <input type="text" id="chat-input" placeholder="Type a message or command (e.g. /stats, /open calc)..." autocomplete="off">
+          <button type="submit" class="btn btn-primary" id="send-btn">
+            <span>Send</span>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. HANDS-FREE VOICE CALL TAB -->
+    <section class="tab-pane" id="tab-call">
+      <div class="call-container">
+        <div class="top-bar" style="width: 100%;">
+          <div class="page-title">
+            <h2>Hands-Free Voice Call</h2>
+            <p>Speak naturally with DUDE in continuous conversation</p>
+          </div>
+        </div>
+
+        <!-- Central Glowing Reactive Voice Orb -->
+        <div class="orb-wrapper idle" id="call-orb">
+          <div class="orb-glow"></div>
+          <div class="orb-ring"></div>
+          <div class="orb-core" id="orb-click-trigger" title="Tap to start/stop voice call"></div>
+        </div>
+
+        <!-- Soundwave Visualization Bars -->
+        <div class="waveform-bars" id="waveform-bars">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+
+        <div class="call-status-text" id="call-status-text">Click the Orb to Start Call</div>
+        <div class="call-transcript" id="call-transcript">Tap the glowing orb to begin a continuous voice conversation with DUDE.</div>
+
+        <button class="btn btn-primary" id="call-toggle-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+          <span id="call-btn-text">Connect Voice Call</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. TELEMETRY TAB -->
+    <section class="tab-pane" id="tab-telemetry">
+      <div class="top-bar">
+        <div class="page-title">
+          <h2>Hardware Telemetry</h2>
+          <p>Real-time PC resource inspection & hardware health</p>
+        </div>
+        <button class="btn btn-secondary" id="refresh-telemetry-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>Refresh Now</span>
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <!-- CPU -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">CPU LOAD</span>
+            <div class="stat-icon" style="color: var(--accent-cyan);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg></div>
+          </div>
+          <div class="stat-value" id="stat-cpu-val">--%</div>
+          <div class="stat-progress"><div class="stat-bar" id="stat-cpu-bar" style="width: 0%;"></div></div>
+          <div class="stat-meta" id="stat-cpu-meta">Logical Cores: --</div>
+        </div>
+
+        <!-- RAM -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">RAM MEMORY</span>
+            <div class="stat-icon" style="color: var(--accent-purple);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></div>
+          </div>
+          <div class="stat-value" id="stat-ram-val">--%</div>
+          <div class="stat-progress"><div class="stat-bar" id="stat-ram-bar" style="width: 0%; background: var(--accent-purple);"></div></div>
+          <div class="stat-meta" id="stat-ram-meta">-- GB Used / -- GB Total</div>
+        </div>
+
+        <!-- DISK -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">STORAGE DISK</span>
+            <div class="stat-icon" style="color: var(--accent-emerald);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z"/></svg></div>
+          </div>
+          <div class="stat-value" id="stat-disk-val">--%</div>
+          <div class="stat-progress"><div class="stat-bar" id="stat-disk-bar" style="width: 0%; background: var(--accent-emerald);"></div></div>
+          <div class="stat-meta" id="stat-disk-meta">-- GB Free / -- GB Total</div>
+        </div>
+
+        <!-- BATTERY -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">BATTERY POWER</span>
+            <div class="stat-icon" style="color: var(--accent-pink);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+          </div>
+          <div class="stat-value" id="stat-battery-val">--%</div>
+          <div class="stat-progress"><div class="stat-bar" id="stat-battery-bar" style="width: 0%; background: var(--accent-pink);"></div></div>
+          <div class="stat-meta" id="stat-battery-meta">Status: Checking...</div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="margin-top: 10px;">
+        <div class="stat-header">
+          <span class="stat-label">SYSTEM & UPTIME</span>
+        </div>
+        <p style="font-size: 1rem; color: var(--text-main); margin-bottom: 6px;">Platform: <strong id="stat-os-val">--</strong></p>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">Uptime: <span id="stat-uptime-val">--</span></p>
+      </div>
+    </section>
+
+    <!-- 4. MEMORY VAULT TAB -->
+    <section class="tab-pane" id="tab-memory">
+      <div class="top-bar">
+        <div class="page-title">
+          <h2>Persistent Memory Vault</h2>
+          <p>Verified facts DUDE remembers across sessions in SQLite</p>
+        </div>
+        <button class="btn btn-secondary" id="clear-all-memory-btn" style="color: var(--accent-rose);">
+          <span>Clear All Facts</span>
+        </button>
+      </div>
+
+      <!-- Add fact bar -->
+      <form id="add-memory-form" class="memory-add-bar">
+        <input type="text" id="memory-key-input" placeholder="Tag (optional, e.g. preference)" style="max-width: 180px;">
+        <input type="text" id="memory-val-input" placeholder="Enter a fact to remember (e.g. Favorite editor is VS Code)..." required>
+        <button type="submit" class="btn btn-primary">
+          <span>Remember</span>
+        </button>
+      </form>
+
+      <div class="memory-grid" id="memory-cards-grid">
+        <!-- Fact cards populated by JS -->
+      </div>
+    </section>
+
+    <!-- 5. NOTES EXPLORER TAB -->
+    <section class="tab-pane" id="tab-notes">
+      <div class="top-bar">
+        <div class="page-title">
+          <h2>Desktop Notes</h2>
+          <p>Persistent notes stored in data/notes/</p>
+        </div>
+        <button class="btn btn-primary" id="create-new-note-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>New Note</span>
+        </button>
+      </div>
+
+      <div class="notes-container">
+        <!-- Notes list pane -->
+        <div class="notes-list-pane" id="notes-list-pane">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Note editor/viewer pane -->
+        <div class="note-editor-pane">
+          <input type="text" id="note-title-input" placeholder="Note Title...">
+          <textarea id="note-content-input" placeholder="Write your note content here..."></textarea>
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-primary" id="save-note-btn">Save Note</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Mobile Connect Modal -->
+<div class="modal-backdrop" id="mobile-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(0, 240, 255, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan);">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 002 2v14a2 2 0 002 2z"/></svg>
+        </div>
+        <h3 style="font-size: 1.1rem; font-weight: 600;">Connect Mobile Phone</h3>
+      </div>
+      <button class="modal-close-btn" id="mobile-modal-close" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.4; margin-bottom: 14px;">
+        Open DUDE on your smartphone (PWA support, continuous voice call, and hardware telemetry). Scan the QR code or enter the URL below:
+      </p>
+
+      <div class="qr-container">
+        <img id="mobile-qr-img" src="" alt="Mobile Connect QR Code" class="qr-code-img">
+        <span style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;">Scan with Camera or Google Lens</span>
+      </div>
+
+      <div class="url-copy-box">
+        <input type="text" id="mobile-url-input" readonly value="http://10.98.107.121:8000">
+        <button class="btn btn-primary" id="btn-copy-mobile-url">
+          <span id="copy-btn-label">Copy URL</span>
+        </button>
+      </div>
+
+      <div class="modal-notice">
+        <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          <span>⚡</span>
+          <span>Troubleshooting Connection</span>
+        </div>
+        <ol style="margin-left: 18px; font-size: 0.82rem; line-height: 1.5; color: var(--text-muted);">
+          <li>Phone must be connected to the <strong>same Wi-Fi / Hotspot</strong> as this PC.</li>
+          <li>Make sure to type <strong>http://</strong> (not https://).</li>
+          <li>If it doesn't load: right-click <code>allow_mobile.bat</code> in the Project DUDE folder and click <strong>"Run as administrator"</strong>.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audio Player Element for Edge-TTS speech -->
+<audio id="tts-audio-player" style="display: none;"></audio>
+
+<!-- App Script -->
+<script src="/js/app.js"></script>
+</body>
+</html>
