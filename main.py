@@ -9,8 +9,10 @@ import sys
 # Ensure UTF-8 encoding on Windows consoles to support emojis cleanly
 if sys.platform == "win32":
     try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        for stream in (sys.stdout, sys.stderr):
+            reconfigure = getattr(stream, "reconfigure", None)
+            if callable(reconfigure):
+                reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
@@ -18,6 +20,10 @@ from dude.config import Config, ConfigurationError
 from dude.core.brain import DudeBrain
 from dude.ui.terminal import DudeTerminalUI
 from dude.ui.desktop import DudeDesktopApp
+from dude.server.app import create_app
+
+# Top-level ASGI FastAPI instance for Vercel, Uvicorn, and cloud deployments
+app = create_app()
 
 
 def main() -> None:

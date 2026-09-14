@@ -14,6 +14,7 @@ import threading
 import subprocess
 import urllib.parse
 import webbrowser
+import tempfile
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -21,8 +22,25 @@ import psutil  # type: ignore
 
 from dude.tools.registry import ToolRegistry
 
+
+def _get_notes_dir() -> Path:
+    """Returns the notes storage directory, falling back to tempdir in serverless/read-only environments."""
+    if os.getenv("VERCEL"):
+        d = Path(tempfile.gettempdir()) / "dude_notes"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "notes"
+    try:
+        default_dir.mkdir(parents=True, exist_ok=True)
+        return default_dir
+    except OSError:
+        d = Path(tempfile.gettempdir()) / "dude_notes"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+
 # Local directory for saving notes
-NOTES_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "notes"
+NOTES_DIR = _get_notes_dir()
 
 
 # ----------------------------------------------------------------------

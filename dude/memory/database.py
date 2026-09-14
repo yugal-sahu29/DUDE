@@ -3,10 +3,12 @@ Database connection and schema management for DUDE Persistent Memory.
 Uses Python's built-in sqlite3.
 """
 
+import os
 import sqlite3
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Iterator
+from typing import Optional, Generator
 
 
 class MemoryDatabase:
@@ -14,14 +16,31 @@ class MemoryDatabase:
 
     def __init__(self, db_path: Optional[Path] = None):
         if db_path is None:
-            # Default to Project DUDE/data/dude_memory.db
-            project_root = Path(__file__).resolve().parent.parent.parent
-            data_dir = project_root / "data"
-            data_dir.mkdir(parents=True, exist_ok=True)
-            self.db_path = data_dir / "dude_memory.db"
+            # Default to Project DUDE/data/dude_memory.db, fallback to tempdir on read-only environments (e.g. Vercel)
+            if os.getenv("VERCEL"):
+                data_dir = Path(tempfile.gettempdir()) / "dude_data"
+                data_dir.mkdir(parents=True, exist_ok=True)
+                self.db_path = data_dir / "dude_memory.db"
+            else:
+                project_root = Path(__file__).resolve().parent.parent.parent
+                data_dir = project_root / "data"
+                try:
+                    data_dir.mkdir(parents=True, exist_ok=True)
+                    self.db_path = data_dir / "dude_memory.db"
+                    # Quick check to ensure directory is writable
+                    test_file = self.db_path.parent / ".test_write"
+                    test_file.touch(exist_ok=True)
+                    test_file.unlink(missing_ok=True)
+                except OSError:
+                    temp_dir = Path(tempfile.gettempdir()) / "dude_data"
+                    temp_dir.mkdir(parents=True, exist_ok=True)
+                    self.db_path = temp_dir / "dude_memory.db"
         else:
             self.db_path = Path(db_path)
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
 
         self._initialize_schema()
 
@@ -33,7 +52,7 @@ class MemoryDatabase:
         return conn
 
     @contextmanager
-    def connect(self) -> Iterator[sqlite3.Connection]:
+    def connect(self) -> Generator[sqlite3.Connection, None, None]:
         """
         Context manager that yields a connection, commits transactions,
         and guarantees connection closing (essential for Windows file locking).

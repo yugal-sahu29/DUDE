@@ -72,9 +72,54 @@ def create_app(
     config: Optional[Config] = None,
 ) -> FastAPI:
     """Creates and configures the FastAPI independent app instance."""
-    app_config = config or Config.load()
-    app_brain = brain or DudeBrain(config=app_config)
-    app_voice = voice or VoiceService(config=app_config)
+    app_config: Optional[Config] = config
+    if app_config is None:
+        try:
+            app_config = Config.load()
+        except Exception:
+            # Fallback placeholder config for build-time or serverless analysis without .env
+            api_key = os.getenv("GROQ_API_KEY", "").strip() or "build_placeholder_key"
+            app_config = Config(api_key=api_key)
+
+    app_brain: Optional[DudeBrain] = brain
+    if app_brain is None and app_config.api_key and app_config.api_key != "build_placeholder_key":
+        try:
+            app_brain = DudeBrain(config=app_config)
+        except Exception:
+            app_brain = None
+
+    app_voice: Optional[VoiceService] = voice
+    if app_voice is None and app_brain is not None:
+        try:
+            app_voice = VoiceService(config=app_brain.config)
+        except Exception:
+            app_voice = None
+
+    def get_brain() -> DudeBrain:
+        nonlocal app_brain, app_config
+        if app_brain is None:
+            try:
+                app_config = Config.load()
+            except Exception as err:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"GROQ_API_KEY is not configured. Please set GROQ_API_KEY in your Vercel Environment Variables: {err}"
+                )
+            app_brain = DudeBrain(config=app_config)
+        return app_brain
+
+    def get_voice() -> VoiceService:
+        nonlocal app_voice, app_config
+        if app_voice is None:
+            try:
+                b = get_brain()
+                app_voice = VoiceService(config=b.config)
+            except Exception:
+                if app_config:
+                    app_voice = VoiceService(config=app_config)
+                else:
+                    raise HTTPException(status_code=500, detail="Voice service is currently unavailable.")
+        return app_voice
 
     app = FastAPI(
         title="Project DUDE",
@@ -93,7 +138,10 @@ def create_app(
 
     # Static assets directory
     static_dir = Path(__file__).resolve().parent / "static"
-    static_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        static_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
     # ----------------------------------------------------------------------
     # System & Status Endpoints
@@ -102,19 +150,41 @@ def create_app(
     @app.get("/api/status")
     async def get_status() -> Dict[str, Any]:
         """Returns DUDE system status, active model, and memory count."""
-        facts = app_brain.get_facts()
+        try:
+            b = get_brain()
+            facts = b.get_facts()
+            model_name = b.config.model
+            server_host = b.config.server_host
+            server_port = b.config.server_port
+        except Exception:
+            facts = []
+            model_name = app_config.model if app_config else "qwen/qwen3.8-27b"
+            server_host = "0.0.0.0"
+            server_port = 8000
+
         local_ip = get_local_ip()
+
+        try:
+            v = get_voice()
+            voice_enabled = v.enabled
+            active_speaker = v.get_speaker()
+            mic_avail = v.is_microphone_available()
+        except Exception:
+            voice_enabled = False
+            active_speaker = "en-US-GuyNeural"
+            mic_avail = False
+
         return {
             "version": __version__,
-            "model": app_brain.config.model,
+            "model": model_name,
             "facts_count": len(facts),
-            "voice_enabled": app_voice.enabled,
-            "active_speaker": app_voice.get_speaker(),
-            "microphone_available": app_voice.is_microphone_available(),
-            "server_host": app_brain.config.server_host,
-            "server_port": app_brain.config.server_port,
+            "voice_enabled": voice_enabled,
+            "active_speaker": active_speaker,
+            "microphone_available": mic_avail,
+            "server_host": server_host,
+            "server_port": server_port,
             "local_ip": local_ip,
-            "mobile_url": f"http://{local_ip}:{app_brain.config.server_port}",
+            "mobile_url": f"http://{local_ip}:{server_port}",
         }
 
     @app.get("/api/telemetry")
@@ -132,6 +202,9 @@ def create_app(
         Processes conversational messages, executes requested desktop tools
         autonomously, and returns the assistant response.
         """
+        b = get_brain()
+        v = get_voice()
+
         user_msg = req.message.strip()
         if not user_msg:
             raise HTTPException(status_code=400, detail="Message cannot be empty.")
@@ -142,13 +215,13 @@ def create_app(
             executed_tools.append({"tool": tool_name, "args": args})
 
         # Save previous callback and attach request-scoped recorder
-        prev_callback = app_brain.on_tool_call
-        app_brain.on_tool_call = _tool_recorder
+        prev_callback = b.on_tool_call
+        b.on_tool_call = _tool_recorder
 
-        initial_facts = len(app_brain.get_facts())
+        initial_facts = len(b.get_facts())
 
         try:
-            response_text = app_brain.generate_response(user_msg)
+            response_text = b.generate_response(user_msg)
         except DudeAuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e))
         except DudeRateLimitError as e:
@@ -158,20 +231,20 @@ def create_app(
         except (DudeAPIError, DudeBrainError, ValueError) as e:
             raise HTTPException(status_code=500, detail=str(e))
         finally:
-            app_brain.on_tool_call = prev_callback
+            b.on_tool_call = prev_callback
 
-        current_facts = app_brain.get_facts()
+        current_facts = b.get_facts()
         new_facts = current_facts[initial_facts:] if len(current_facts) > initial_facts else []
 
         # If user explicitly requested audio spoken on host PC speakers
-        if req.speak and app_voice.enabled:
-            app_voice.speak_if_enabled(response_text, async_mode=True)
+        if req.speak and v.enabled:
+            v.speak_if_enabled(response_text, async_mode=True)
 
         return {
             "response": response_text,
             "tools_executed": executed_tools,
             "new_facts": new_facts,
-            "session_id": app_brain.memory.current_session_id,
+            "session_id": b.memory.current_session_id,
         }
 
     # ----------------------------------------------------------------------
@@ -181,22 +254,25 @@ def create_app(
     @app.get("/api/memory")
     async def list_memory() -> Dict[str, Any]:
         """Returns all persistent facts stored in SQLite."""
-        facts = app_brain.get_facts()
+        b = get_brain()
+        facts = b.get_facts()
         return {"count": len(facts), "facts": facts}
 
     @app.post("/api/memory")
     async def add_memory(req: MemoryCreateRequest) -> Dict[str, Any]:
         """Stores a new fact into persistent memory."""
+        b = get_brain()
         val = req.fact_value.strip()
         if not val:
             raise HTTPException(status_code=400, detail="Fact value cannot be empty.")
-        fact_id = app_brain.remember_fact(val, req.fact_key)
+        fact_id = b.remember_fact(val, req.fact_key)
         return {"status": "success", "id": fact_id, "fact_value": val, "fact_key": req.fact_key}
 
     @app.delete("/api/memory/{fact_id}")
     async def delete_memory(fact_id: int) -> Dict[str, Any]:
         """Deletes a specific fact by ID."""
-        deleted = app_brain.forget_fact(fact_id)
+        b = get_brain()
+        deleted = b.forget_fact(fact_id)
         if not deleted:
             raise HTTPException(status_code=404, detail=f"Fact #{fact_id} not found.")
         return {"status": "success", "deleted_id": fact_id}
@@ -204,7 +280,8 @@ def create_app(
     @app.delete("/api/memory")
     async def clear_all_memory() -> Dict[str, Any]:
         """Clears all persistent facts."""
-        count = app_brain.clear_all_facts()
+        b = get_brain()
+        count = b.clear_all_facts()
         return {"status": "success", "cleared_count": count}
 
     # ----------------------------------------------------------------------
@@ -246,8 +323,9 @@ def create_app(
     @app.get("/api/voice/voices")
     async def get_voices() -> Dict[str, Any]:
         """Returns recommended neural voices and the active speaker."""
+        v = get_voice()
         return {
-            "active": app_voice.get_speaker(),
+            "active": v.get_speaker(),
             "voices": RECOMMENDED_VOICES,
         }
 
@@ -257,6 +335,8 @@ def create_app(
         Accepts audio from the client browser microphone and transcribes it
         using Groq's whisper-large-v3-turbo model.
         """
+        v = get_voice()
+        b = get_brain()
         suffix = Path(audio.filename or "audio.webm").suffix or ".webm"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp_path = tmp.name
@@ -265,9 +345,9 @@ def create_app(
 
         try:
             with open(tmp_path, "rb") as f:
-                transcription = app_voice.groq_client.audio.transcriptions.create(
+                transcription = v.groq_client.audio.transcriptions.create(
                     file=(os.path.basename(tmp_path), f.read()),
-                    model=app_config.whisper_model,
+                    model=b.config.whisper_model,
                     language="en",
                     response_format="json",
                 )
@@ -291,7 +371,8 @@ def create_app(
         if not clean_text:
             raise HTTPException(status_code=400, detail="Text for speech cannot be empty.")
 
-        speaker = req.speaker or app_voice.get_speaker()
+        v = get_voice()
+        speaker = req.speaker or v.get_speaker()
 
         if not _EDGE_TTS_AVAILABLE:
             raise HTTPException(status_code=501, detail="Edge-TTS engine is not available on server.")
@@ -303,7 +384,7 @@ def create_app(
             communicate = edge_tts.Communicate(
                 text=clean_text,
                 voice=speaker,
-                rate=app_voice.tts.rate,
+                rate=v.tts.rate,
             )
             await communicate.save(temp_path)
 
@@ -330,6 +411,13 @@ def create_app(
         """
         await websocket.accept()
         try:
+            b = get_brain()
+        except Exception as e:
+            await websocket.send_json({"type": "error", "message": str(e)})
+            await websocket.close()
+            return
+
+        try:
             while True:
                 data_text = await websocket.receive_text()
                 try:
@@ -345,11 +433,11 @@ def create_app(
                 await websocket.send_json({"type": "status", "status": "thinking"})
 
                 try:
-                    response_text = app_brain.generate_response(user_msg)
+                    response_text = b.generate_response(user_msg)
                     await websocket.send_json({
                         "type": "response",
                         "response": response_text,
-                        "session_id": app_brain.memory.current_session_id,
+                        "session_id": b.memory.current_session_id,
                     })
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": str(e)})
